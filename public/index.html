@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <title>Lista de Alunos na disciplina de Linguagem de Programação I</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Lista de Alunos na disciplina de Linguagem de Programação I</h1>
+
+    <div id="mensagem"></div>
+    <!-- vazio = aluno novo (POST) | preenchido = existente (PUT) -->
+    <h2 id="titulo-form">Novo aluno</h2>
+    <form id="form-aluno">
+        <input type="hidden" id="id_aluno">
+        <label>Matrícula <input type="text" id="matricula" required></label>
+        <label>Nome <input type="text" id="nome" required></label>
+        <label>CPF <input type="text" id="cpf" required></label>
+        <label>Celular <input type="text" id="celular"></label>
+        <label>Código do Curso
+            <input type="number" id="id_curso" required></label>
+        <div class="botoes">
+            <button type="submit" id="btn-salvar">Salvar</button>
+        </div>
+    </form>
+
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Matrícula</th>
+                <th>Nome</th>
+                <th>CPF</th>
+                <th>Celular</th>
+                <th>Código Curso</th>
+                <th>Curso</th>
+                <th>Ações</th>
+
+            </tr>
+        </thead>
+
+        <tbody id="tabela-alunos"></tbody>
+    </table>
+
+    <script>
+        async function carregarAlunos() {
+            const tbody = document.getElementById('tabela-alunos');
+
+            try {
+                const resposta = await fetch('/api/alunos');
+                const alunos = await resposta.json();
+
+                if (!resposta.ok) {
+                    throw new Error(alunos.erro || 'Erro ao carregar alunos.');
+                }
+
+                tbody.innerHTML = alunos.map(a => `
+                    <tr>
+                        <td>${a.id}</td>
+                        <td>${a.matricula}</td>
+                        <td>${a.nome}</td>
+                        <td>${a.cpf}</td>
+                        <td>${a.celular}</td>
+                        <td>${a.idCurso ?? a.idcurso ?? ''}</td>
+                        <td>${a.curso ?? ''}</td>
+                        <td><button onclick="editarAluno(${a.id_aluno})">Editar</button></td>
+                        <td><button onclick="DeletarAluno(${a.id_aluno})">Editar</button></td>
+
+
+                    </tr>
+                `).join('');
+
+            } catch (erro) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">${erro.message}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        carregarAlunos();
+        let listaAlunos = []; // lista guardada em memória
+        // ao listar: listaAlunos = alunos;
+        // em cada linha da tabela:
+        // <button onclick="editarAluno(${a.id_aluno})">Editar</button>
+        function editarAluno(id) {
+            // == compara o valor sem exigir o mesmo tipo
+            const a = listaAlunos.find(aluno => aluno.id_aluno == id);
+            document.getElementById('id_aluno').value = a.id_aluno;
+            document.getElementById('matricula').value = a.matricula;
+            document.getElementById('nome').value = a.nome;
+            document.getElementById('cpf').value = a.cpf;
+            document.getElementById('celular').value = a.celular ?? '';
+            document.getElementById('id_curso').value = a.id_curso;
+            window.scrollTo(0, 0); // sobe até o formulário
+        }
+        Document.getElementById('form-aluno')
+            .addEventListener('submit', async (evento) => {
+                // impede o navegador de recarregar a página
+                evento.preventDefault();
+                const id = document.getElementById('id_aluno').value;
+                // objeto com os dados digitados no formulário
+                const aluno = {
+                    matricula: document.getElementById('matricula').value,
+                    nome: document.getElementById('nome').value,
+                    cpf: document.getElementById('cpf').value,
+                    celular: document.getElementById('celular').value,
+                    id_curso: document.getElementById('id_curso').value
+                };
+                // define método e endereço: inclusão ou alteração
+                const metodo = id ? 'PUT' : 'POST';
+                const endereco = id ? '/api/alunos/' + id : '/api/alunos';
+                // JSON.stringify converte o objeto em texto JSON
+                const resposta = await fetch(endereco, {
+                    method: metodo,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(aluno)
+                });
+                const resultado = await resposta.json();
+                // mostra a mensagem do servidor (sucesso ou erro)
+                document.getElementById('mensagem').textContent =
+                    resultado.mensagem ?? resultado.erro;
+                if (resposta.ok) {
+                    document.getElementById('form-aluno').reset();
+                    document.getElementById('id_aluno').value = '';
+                    document.getElementById('titulo-form').textContent = 'Novo aluno';
+                    carregarAlunos(); // recarrega a tabela
+                }
+            });
+
+    </script>
+
+</body>
+
+</html>
